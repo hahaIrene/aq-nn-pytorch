@@ -13,9 +13,9 @@ val_dataset = AqDataset(r"./data/validation.csv")
 
 ## 設定超參數
 # 所有資料進入類神經網路一次，稱為一個epoch
-EPOCH = 100
+EPOCH = 1000
 # 每次拿多少筆資料更新類神經網路
-BATCH_SIZE = 1024
+BATCH_SIZE = 64
 # 每個EPOCH更新參數的次數
 STEP_PER_EPOCH = len(train_dataset) // BATCH_SIZE
 # 學習率
