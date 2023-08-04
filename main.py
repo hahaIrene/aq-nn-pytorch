@@ -4,6 +4,7 @@ from src.graph import generateGraph
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
+from torchmetrics import R2Score
 # DataLoader 用於與DATASET連結 從getitem抓東西出來訓練
 
 train_dataset = AqDataset(r"./data/training.csv")
@@ -46,6 +47,8 @@ val_dataloader = DataLoader(
 epochs = []
 train_losses = []
 val_losses = []
+train_r2_list = []
+val_r2_list = []
 # 開始訓練
 for epoch in range(EPOCH):
 
@@ -53,8 +56,11 @@ for epoch in range(EPOCH):
     train_step = 0
     val_loss = 0.0
     val_step = 0
+    train_total_r2score = 0.0
+    val_total_r2score = 0.0
 
     for data, target in train_dataloader:
+        r2score = R2Score().to('cuda')
         # 將資料讀入至cpu或gpu
         data, target = data.to('cuda'), target.to('cuda')
         # 清除梯度
@@ -67,31 +73,40 @@ for epoch in range(EPOCH):
         loss.backward()
         optimizer.step()
         train_loss += loss.item()
+        r2s = r2score(pred, target)
+        train_total_r2score += r2s.item()
         train_step += 1
         # print(f"epoch : {epoch+1} | step : {train_step} | loss : {loss.item()}")
 
     for data, target in val_dataloader:
+        r2score = R2Score().to('cuda')
         # 將資料讀入至cpu或gpu
         data, target = data.to('cuda'), target.to('cuda')
         pred = model(data)
         loss = loss_function(pred, target.double())
         val_loss += loss.item()
+        r2s = r2score(pred, target)
+        val_total_r2score += r2s.item()
         val_step += 1
 
         # print(f"-epoch : {epoch+1} | step : {val_step} | loss : {loss.item()}")
     
     mean_train_loss = train_loss / train_step
     mean_val_loss = val_loss / val_step
+    mean_train_r2score = train_total_r2score / train_step
+    mean_val_r2score = val_total_r2score / val_step
 
-    print(f"epoch : {epoch+1} | training loss : {mean_train_loss} | validation loss : {mean_val_loss}")
+    print(f"epoch : {epoch+1} | train loss : {mean_train_loss} | train R2: {mean_train_r2score} | val loss : {mean_val_loss} | val R2: {mean_val_r2score}")
 
     
     epochs.append(epoch)
     train_losses.append(mean_train_loss)
     val_losses.append(mean_val_loss)
+    train_r2_list.append(mean_train_r2score)
+    val_r2_list.append(mean_val_r2score)
 
     if (epoch+1) % 10 == 0 and (epoch+1) >= 10:
-        generateGraph(epoch+1, epochs, train_losses, val_losses)
+        generateGraph(epoch+1, epochs, train_losses, val_losses, train_r2_list, val_r2_list)
 
 
 
