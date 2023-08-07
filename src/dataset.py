@@ -32,6 +32,5 @@ class AqDataset(Dataset):
         return self.X[index, :], self.Y[index, :]
 
 
-    def __len__(self):
-        
+    def __len__(self):       
         return self.Y.shape[0]

@@ -104,7 +104,7 @@ for epoch in range(EPOCH):
     val_losses.append(mean_val_loss)
     train_r2_list.append(mean_train_r2score)
     val_r2_list.append(mean_val_r2score)
-
+# 每的倍數存一次 防止為0
     if (epoch+1) % 10 == 0 and (epoch+1) >= 10:
         generateGraph(epoch+1, epochs, train_losses, val_losses, train_r2_list, val_r2_list)
 
