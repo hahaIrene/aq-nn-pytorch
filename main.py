@@ -5,6 +5,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from torchmetrics import R2Score
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 # DataLoader 用於與DATASET連結 從getitem抓東西出來訓練
 
 train_dataset = AqDataset(r"./data/training.csv")
@@ -15,11 +16,11 @@ val_dataset = AqDataset(r"./data/validation.csv")
 # 所有資料進入類神經網路一次，稱為一個epoch
 EPOCH = 1000
 # 每次拿多少筆資料更新類神經網路
-BATCH_SIZE = 64
+BATCH_SIZE = 128
 # 每個EPOCH更新參數的次數
 STEP_PER_EPOCH = len(train_dataset) // BATCH_SIZE
 # 學習率
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.1
 
 
 
@@ -30,6 +31,8 @@ model = MLP().to('cuda')
 
 # 優化器
 optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=2, verbose=True)
+# optimizer = torch.optim.RMSprop(model.parameters(), lr=LEARNING_RATE, alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)
 # 損失函數(L1用於計算回歸殘差 MAE)
 loss_function = nn.L1Loss()
 
@@ -63,15 +66,16 @@ for epoch in range(EPOCH):
         r2score = R2Score().to('cuda')
         # 將資料讀入至cpu或gpu
         data, target = data.to('cuda'), target.to('cuda')
-        # 清除梯度
-        optimizer.zero_grad()
         # 進行預測
         pred = model(data)
         # 計算殘差(loss)
-        loss = loss_function(pred, target)
+        loss = loss_function(pred, target.double())
+        # 清除梯度
+        optimizer.zero_grad()
         # 反向傳播(更新模型參數)
         loss.backward()
         optimizer.step()
+
         train_loss += loss.item()
         r2s = r2score(pred, target)
         train_total_r2score += r2s.item()
@@ -88,6 +92,7 @@ for epoch in range(EPOCH):
         r2s = r2score(pred, target)
         val_total_r2score += r2s.item()
         val_step += 1
+        scheduler.step(loss)
 
         # print(f"-epoch : {epoch+1} | step : {val_step} | loss : {loss.item()}")
     
